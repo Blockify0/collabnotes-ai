@@ -13,6 +13,7 @@ function WorkspaceContent() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [summary, setSummary] = useState<string | null>(null)
   const [showShareDialog, setShowShareDialog] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -25,16 +26,19 @@ function WorkspaceContent() {
     const newContent = e.target.value
     setContent(newContent)
     updateMyPresence({ content: newContent })
+    setError(null) // Clear any previous errors
   }
 
   const handleSummarize = async () => {
     if (!content.trim()) return
     setIsProcessing(true)
+    setError(null)
     try {
       const result = await summarizeText(content)
       setSummary(result)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error summarizing:', error)
+      setError(error.message || 'Failed to summarize text. Please try again.')
     } finally {
       setIsProcessing(false)
     }
@@ -79,17 +83,29 @@ function WorkspaceContent() {
               <textarea
                 value={content}
                 onChange={handleContentChange}
-                className="w-full h-64 p-4 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full h-64 p-4 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium text-base leading-relaxed"
                 placeholder="Start typing..."
+                style={{ 
+                  color: '#111827', // text-gray-900
+                  fontSize: '1rem',
+                  lineHeight: '1.75',
+                  fontWeight: '500'
+                }}
               />
             </div>
           </div>
+          
+          {error && (
+            <div className="mt-4 p-4 bg-red-50 rounded-md">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
           
           {summary && (
             <div className="mt-6 bg-white shadow sm:rounded-lg">
               <div className="px-4 py-5 sm:p-6">
                 <h3 className="text-lg font-medium text-gray-900">Summary</h3>
-                <div className="mt-2 text-sm text-gray-500">{summary}</div>
+                <div className="mt-2 text-sm text-gray-700">{summary}</div>
               </div>
             </div>
           )}
@@ -100,7 +116,14 @@ function WorkspaceContent() {
               disabled={isProcessing || !content.trim()}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isProcessing ? 'Processing...' : 'Summarize'}
+              {isProcessing ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Processing...
+                </div>
+              ) : (
+                'Summarize'
+              )}
             </button>
           </div>
         </div>
