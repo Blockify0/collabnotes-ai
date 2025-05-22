@@ -25,7 +25,10 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(arrayBuffer)
     
     // Parse PDF
-    const data = await pdfParse(buffer)
+    const data = await pdfParse(buffer, {
+      pagerender: renderPage,
+      max: 0 // No page limit
+    })
     
     if (!data.text.trim()) {
       console.error('No text extracted from PDF')
@@ -44,5 +47,16 @@ export async function POST(request: Request) {
       },
       { status: 500 }
     )
+  }
+}
+
+// Custom page renderer to handle text extraction
+async function renderPage(pageData: any) {
+  try {
+    const textContent = await pageData.getTextContent()
+    return textContent.items.map((item: any) => item.str).join(' ')
+  } catch (error) {
+    console.error('Error rendering page:', error)
+    return ''
   }
 } 

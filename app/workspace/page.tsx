@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { RoomProvider, useMyPresence, useUpdateMyPresence, useSelf, useOthers, useStorage } from '../../lib/liveblocks'
+import { RoomProvider, useMyPresence, useUpdateMyPresence, useSelf, useOthers, useStorage, useRoom } from '../../lib/liveblocks'
 import { LiveList } from '@liveblocks/client'
 import { supabase } from '../../lib/supabase'
 import { summarizeText, transcribeAudio, extractTextFromPDF } from '../../lib/openai'
@@ -81,6 +81,7 @@ function WorkspaceContent() {
       }
 
       if (extractedText) {
+        // Update presence with the new content
         updateMyPresence({ content: extractedText })
       }
     } catch (error: any) {
