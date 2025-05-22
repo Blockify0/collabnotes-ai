@@ -75,33 +75,33 @@ function WorkspaceContent() {
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-semibold text-gray-900">Workspace</h1>
             <div className="flex space-x-4">
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
                 accept="audio/*,application/pdf"
-                className="hidden"
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Upload File
-              </button>
-              <button
+          >
+            Upload File
+          </button>
+          <button
                 onClick={() => setShowShareDialog(true)}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Share
-              </button>
-            </div>
-          </div>
+          >
+            Share
+          </button>
+        </div>
+              </div>
 
           <div className="bg-white shadow sm:rounded-lg">
             <div className="px-4 py-5 sm:p-6">
-              <textarea
-                value={content}
-                onChange={handleContentChange}
+            <textarea
+              value={content}
+              onChange={handleContentChange}
                 className="w-full h-64 p-4 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium text-base leading-relaxed"
                 placeholder="Start typing or upload a file..."
                 style={{ 
