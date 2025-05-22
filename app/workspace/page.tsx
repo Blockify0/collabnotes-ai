@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { RoomProvider, useMyPresence, useUpdateMyPresence, useSelf, useOthers } from '../../lib/liveblocks'
 import { LiveList } from '@liveblocks/client'
 import { supabase } from '../../lib/supabase'
-import { summarizeText, transcribeAudio } from '../../lib/openai'
+import { summarizeText, transcribeAudio, extractTextFromPDF } from '../../lib/openai'
 import ShareDialog from '../../components/ShareDialog'
 
 function WorkspaceContent() {
