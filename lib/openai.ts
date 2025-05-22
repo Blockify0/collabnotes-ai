@@ -6,22 +6,20 @@ const openai = new OpenAI({
 
 export async function summarizeText(text: string) {
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: "You are a helpful assistant that summarizes text concisely."
-        },
-        {
-          role: "user",
-          content: `Please summarize the following text:\n\n${text}`
-        }
-      ],
-      max_tokens: 150,
+    const response = await fetch('/api/summarize', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text }),
     })
 
-    return response.choices[0].message.content
+    if (!response.ok) {
+      throw new Error('Failed to summarize text')
+    }
+
+    const data = await response.json()
+    return data.summary
   } catch (error) {
     console.error('Error summarizing text:', error)
     throw error
@@ -32,15 +30,15 @@ export async function transcribeAudio(audioFile: File) {
   try {
     const formData = new FormData()
     formData.append('file', audioFile)
-    formData.append('model', 'whisper-1')
 
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    const response = await fetch('/api/transcribe', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY || process.env.OPENAI_API_KEY}`,
-      },
       body: formData,
     })
+
+    if (!response.ok) {
+      throw new Error('Failed to transcribe audio')
+    }
 
     const data = await response.json()
     return data.text
