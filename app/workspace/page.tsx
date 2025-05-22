@@ -2,14 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { RoomProvider, useMyPresence, useUpdateMyPresence, useSelf, useOthers } from '../../lib/liveblocks'
+import { RoomProvider, useMyPresence, useUpdateMyPresence, useSelf, useOthers, useStorage } from '../../lib/liveblocks'
 import { LiveList } from '@liveblocks/client'
 import { supabase } from '../../lib/supabase'
 import { summarizeText, transcribeAudio, extractTextFromPDF } from '../../lib/openai'
 import ShareDialog from '../../components/ShareDialog'
 
 function WorkspaceContent() {
-  const [content, setContent] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [summary, setSummary] = useState<string | null>(null)
   const [showShareDialog, setShowShareDialog] = useState(false)
@@ -17,24 +16,31 @@ function WorkspaceContent() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
-  // Liveblocks presence
+  // Liveblocks hooks
   const updateMyPresence = useUpdateMyPresence()
   const others = useOthers()
   const self = useSelf()
+  const content = useStorage((root: { readonly content: readonly string[] }) => root.content)
+
+  // Initialize content if empty
+  useEffect(() => {
+    if (content?.length === 0) {
+      updateMyPresence({ content: '' })
+    }
+  }, [content, updateMyPresence])
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value
-    setContent(newContent)
     updateMyPresence({ content: newContent })
     setError(null)
   }
 
   const handleSummarize = async () => {
-    if (!content.trim()) return
+    if (!content) return
     setIsProcessing(true)
     setError(null)
     try {
-      const result = await summarizeText(content)
+      const result = await summarizeText(content.join('\n'))
       setSummary(result)
     } catch (error: any) {
       console.error('Error summarizing:', error)
@@ -50,15 +56,32 @@ function WorkspaceContent() {
 
     setIsProcessing(true)
     setError(null)
+
     try {
-      if (file.type.startsWith('audio/')) {
-        const transcription = await transcribeAudio(file)
-        setContent(prev => prev + '\n\nTranscription:\n' + transcription)
-      } else if (file.type === 'application/pdf') {
-        const text = await extractTextFromPDF(file)
-        setContent(prev => prev + '\n\nPDF Content:\n' + text)
-      } else {
-        setError('Unsupported file type. Please upload an audio file or PDF.')
+      const formData = new FormData()
+      formData.append('file', file)
+
+      let extractedText = ''
+      if (file.type === 'application/pdf') {
+        const response = await fetch('/api/extract-pdf', {
+          method: 'POST',
+          body: formData,
+        })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error || 'Failed to extract PDF')
+        extractedText = data.text
+      } else if (file.type.startsWith('audio/')) {
+        const response = await fetch('/api/transcribe', {
+          method: 'POST',
+          body: formData,
+        })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error || 'Failed to transcribe audio')
+        extractedText = data.text
+      }
+
+      if (extractedText) {
+        updateMyPresence({ content: extractedText })
       }
     } catch (error: any) {
       console.error('Error processing file:', error)
@@ -75,75 +98,69 @@ function WorkspaceContent() {
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-semibold text-gray-900">Workspace</h1>
             <div className="flex space-x-4">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
                 accept="audio/*,application/pdf"
-            className="hidden"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Upload File
-          </button>
-          <button
+              >
+                Upload File
+              </button>
+              <button
                 onClick={() => setShowShareDialog(true)}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Share
-          </button>
-        </div>
-              </div>
-
-          <div className="bg-white shadow sm:rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-            <textarea
-              value={content}
-              onChange={handleContentChange}
-                className="w-full h-64 p-4 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 font-medium text-base leading-relaxed"
-                placeholder="Start typing or upload a file..."
-                style={{ 
-                  color: '#111827',
-                  fontSize: '1rem',
-                  lineHeight: '1.75',
-                  fontWeight: '500'
-                }}
-              />
+              >
+                Share
+              </button>
             </div>
           </div>
-          
-          {error && (
-            <div className="mt-4 p-4 bg-red-50 rounded-md">
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
-          
-          {summary && (
-            <div className="mt-6 bg-white shadow sm:rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <h3 className="text-lg font-medium text-gray-900">Summary</h3>
-                <div className="mt-2 text-sm text-gray-700">{summary}</div>
-              </div>
-            </div>
-          )}
 
-          <div className="mt-6">
-            <button
-              onClick={handleSummarize}
-              disabled={isProcessing || !content.trim()}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isProcessing ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Processing...
-                </div>
-              ) : (
-                'Summarize'
+          <div className="bg-white shadow rounded-lg p-6">
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                {others.map(({ presence }) => (
+                  <div
+                    key={presence.id}
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: presence.color }}
+                    title={presence.name}
+                  />
+                ))}
+              </div>
+
+              <textarea
+                value={content?.join('\n') || ''}
+                onChange={handleContentChange}
+                className="w-full h-64 p-4 border rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Start typing..."
+              />
+
+              {error && (
+                <div className="text-red-600 text-sm">{error}</div>
               )}
-            </button>
+
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={handleSummarize}
+                  disabled={isProcessing || !content}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                >
+                  {isProcessing ? 'Processing...' : 'Summarize'}
+                </button>
+              </div>
+
+              {summary && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-md">
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Summary</h3>
+                  <p className="text-gray-600">{summary}</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -151,7 +168,7 @@ function WorkspaceContent() {
       {showShareDialog && (
         <ShareDialog
           onClose={() => setShowShareDialog(false)}
-          roomId={self?.id || ''}
+          roomId="workspace"
         />
       )}
     </div>
