@@ -4,15 +4,18 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 interface ShareDialogProps {
-  workspaceId: string
   onClose: () => void
+  roomId: string
 }
 
-export default function ShareDialog({ workspaceId, onClose }: ShareDialogProps) {
+export default function ShareDialog({ onClose, roomId }: ShareDialogProps) {
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  const shareUrl = `${window.location.origin}/workspace?room=${roomId}`
 
   const handleShare = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -22,7 +25,7 @@ export default function ShareDialog({ workspaceId, onClose }: ShareDialogProps) 
 
     try {
       // Create a share link
-      const shareLink = `${window.location.origin}/workspace/${workspaceId}`
+      const shareLink = `${window.location.origin}/workspace/${roomId}`
       
       // Send invitation email
       const { error } = await supabase.functions.invoke('send-invitation', {
@@ -40,60 +43,52 @@ export default function ShareDialog({ workspaceId, onClose }: ShareDialogProps) 
     }
   }
 
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
       <div className="bg-white rounded-lg p-6 max-w-md w-full">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Share Workspace</h2>
+          <h3 className="text-lg font-medium text-gray-900">Share Workspace</h3>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-gray-400 hover:text-gray-500"
           >
-            ✕
+            <span className="sr-only">Close</span>
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
-
-        <form onSubmit={handleShare} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email address
-            </label>
+        <div className="mt-4">
+          <label htmlFor="share-url" className="block text-sm font-medium text-gray-700">
+            Share URL
+          </label>
+          <div className="mt-1 flex rounded-md shadow-sm">
             <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              placeholder="Enter email address"
-              required
+              type="text"
+              id="share-url"
+              readOnly
+              value={shareUrl}
+              className="flex-1 min-w-0 block w-full px-3 py-2 rounded-md border border-gray-300 bg-gray-50 text-gray-500 sm:text-sm"
             />
-          </div>
-
-          {error && (
-            <div className="text-red-500 text-sm">{error}</div>
-          )}
-
-          {success && (
-            <div className="text-green-500 text-sm">{success}</div>
-          )}
-
-          <div className="flex justify-end space-x-3">
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+              onClick={handleCopy}
+              className="ml-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md disabled:opacity-50"
-            >
-              {isLoading ? 'Sending...' : 'Share'}
+              {copied ? 'Copied!' : 'Copy'}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )

@@ -3,6 +3,7 @@ import { createRoomContext } from '@liveblocks/react'
 
 const client = createClient({
   authEndpoint: '/api/liveblocks-auth',
+  throttle: 16, // 60fps
 })
 
 // Room type definition
@@ -15,7 +16,7 @@ type Presence = {
 }
 
 type Storage = {
-  content: string
+  content: LiveList<string>
 }
 
 type UserMeta = {

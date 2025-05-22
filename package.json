@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@liveblocks/client": "^2.24.2",
+    "@liveblocks/node": "^2.24.2",
     "@liveblocks/react": "^2.24.2",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/supabase-js": "^2.49.7",
