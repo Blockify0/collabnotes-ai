@@ -10,6 +10,7 @@ export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [message, setMessage] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -41,6 +42,7 @@ export default function Auth() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setMessage(null)
     setIsLoading(true)
 
     try {
@@ -53,7 +55,14 @@ export default function Auth() {
           },
         })
         if (error) throw error
-        if (data?.user) {
+        
+        if (data?.user && !data.session) {
+          setMessage('Please check your email for the confirmation link to complete your registration.')
+          setIsLoading(false)
+          return
+        }
+        
+        if (data?.session) {
           router.push('/workspace')
         }
       } else {
@@ -62,7 +71,7 @@ export default function Auth() {
           password,
         })
         if (error) throw error
-        if (data?.user) {
+        if (data?.session) {
           router.push('/workspace')
         }
       }
@@ -134,6 +143,12 @@ export default function Auth() {
             <div className="text-red-500 text-sm text-center">{error}</div>
           )}
 
+          {message && (
+            <div className="text-green-600 text-sm text-center bg-green-50 p-4 rounded-md">
+              {message}
+            </div>
+          )}
+
           <div>
             <button
               type="submit"
@@ -155,7 +170,11 @@ export default function Auth() {
             <button
               type="button"
               className="font-medium text-indigo-600 hover:text-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={() => setIsSignUp(!isSignUp)}
+              onClick={() => {
+                setIsSignUp(!isSignUp)
+                setError(null)
+                setMessage(null)
+              }}
               disabled={isLoading}
             >
               {isSignUp
