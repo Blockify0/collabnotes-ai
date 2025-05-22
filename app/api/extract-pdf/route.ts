@@ -4,9 +4,8 @@ import * as pdfjs from 'pdfjs-dist'
 export const dynamic = 'force-dynamic'
 export const runtime = 'edge'
 
-// Initialize PDF.js worker
-const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.entry')
-pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker
+// Configure PDF.js to run without a worker
+pdfjs.GlobalWorkerOptions.workerSrc = ''
 
 export async function POST(request: Request) {
   try {
