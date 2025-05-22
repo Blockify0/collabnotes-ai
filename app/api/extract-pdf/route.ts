@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server'
-import pdfParse from 'pdf-parse'
+import * as pdfjs from 'pdfjs-dist'
 
 export const dynamic = 'force-dynamic'
 // Remove edge runtime to use serverless function
 // export const runtime = 'edge'
+
+// Initialize PDF.js
+pdfjs.GlobalWorkerOptions.workerSrc = ''
 
 export async function POST(request: Request) {
   try {
@@ -20,23 +23,27 @@ export async function POST(request: Request) {
       )
     }
 
-    // Convert file to buffer
+    // Convert file to array buffer
     const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
     
-    // Parse PDF
-    const data = await pdfParse(buffer, {
-      pagerender: renderPage,
-      max: 0 // No page limit
-    })
+    // Load the PDF document
+    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise
     
-    if (!data.text.trim()) {
+    // Extract text from all pages
+    let text = ''
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i)
+      const content = await page.getTextContent()
+      text += content.items.map((item: any) => item.str).join(' ') + '\n'
+    }
+
+    if (!text.trim()) {
       console.error('No text extracted from PDF')
       throw new Error('No text extracted from PDF')
     }
 
     console.log('Successfully extracted text from PDF')
-    return NextResponse.json({ text: data.text.trim() })
+    return NextResponse.json({ text: text.trim() })
   } catch (error: any) {
     console.error('PDF extraction error:', error)
     
