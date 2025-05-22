@@ -8,6 +8,16 @@ if (!process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY) {
 const client = createClient({
   publicApiKey: process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY,
   throttle: 16, // 60fps
+  async resolveUsers({ userIds }) {
+    // Used only for Presence. Returns the current user's info.
+    return userIds.map((userId) => ({
+      id: userId,
+      info: {
+        name: userId,
+        picture: `https://ui-avatars.com/api/?name=${userId}&background=random`,
+      },
+    }))
+  },
 })
 
 // Room type definition

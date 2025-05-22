@@ -62,10 +62,35 @@ export async function transcribeAudio(file: File): Promise<string> {
   }
 }
 
-export async function extractTextFromPDF(pdfFile: File) {
-  // Note: This is a placeholder. You'll need to implement PDF text extraction
-  // using a library like pdf.js or a service like AWS Textract
-  throw new Error('PDF text extraction not implemented')
+export async function extractTextFromPDF(file: File): Promise<string> {
+  try {
+    console.log('Sending PDF extraction request for file:', file.name)
+    
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await fetch('/api/extract-pdf', {
+      method: 'POST',
+      body: formData,
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      console.error('PDF extraction API error:', data)
+      throw new Error(data.details || data.error || 'Failed to extract text from PDF')
+    }
+
+    if (!data.text) {
+      throw new Error('No text extracted from PDF')
+    }
+
+    console.log('Successfully extracted text from PDF')
+    return data.text
+  } catch (error: any) {
+    console.error('Error in extractTextFromPDF:', error)
+    throw new Error(error.message || 'Failed to extract text from PDF')
+  }
 }
 
 export async function summarizeYouTubeVideo(videoUrl: string) {
