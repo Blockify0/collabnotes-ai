@@ -26,15 +26,34 @@ function WorkspaceContent() {
   useEffect(() => {
     // Check authentication
     const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        if (error || !session) {
+          console.error('Auth error:', error)
+          router.push('/auth')
+          return
+        }
+        setUser(session.user)
+        setIsLoading(false)
+      } catch (error) {
+        console.error('Error checking auth:', error)
         router.push('/auth')
-        return
       }
-      setUser(user)
-      setIsLoading(false)
     }
     checkUser()
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        router.push('/auth')
+      } else if (session) {
+        setUser(session.user)
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [router])
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -101,7 +120,7 @@ function WorkspaceContent() {
             >
               Share
             </button>
-              </div>
+          </div>
 
           <div className="bg-white shadow sm:rounded-lg">
             <div className="px-4 py-5 sm:p-6">
@@ -112,25 +131,25 @@ function WorkspaceContent() {
                 placeholder="Start typing..."
               />
             </div>
-            </div>
-            
+          </div>
+          
           {summary && (
             <div className="mt-6 bg-white shadow sm:rounded-lg">
               <div className="px-4 py-5 sm:p-6">
                 <h3 className="text-lg font-medium text-gray-900">Summary</h3>
                 <div className="mt-2 text-sm text-gray-500">{summary}</div>
               </div>
-          </div>
+            </div>
           )}
 
           <div className="mt-6">
-          <button
-            onClick={handleSummarize}
-            disabled={isProcessing || !content.trim()}
+            <button
+              onClick={handleSummarize}
+              disabled={isProcessing || !content.trim()}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isProcessing ? 'Processing...' : 'Summarize'}
-          </button>
+            >
+              {isProcessing ? 'Processing...' : 'Summarize'}
+            </button>
           </div>
         </div>
       </div>
@@ -146,35 +165,48 @@ function WorkspaceContent() {
 }
 
 export default function Workspace() {
-  const [user, setUser] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
+  const [user, setUser] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
     const checkUser = async () => {
       try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error || !user) {
-          console.error('Auth error:', error);
-          router.push('/auth');
-          return;
+        const { data: { session }, error } = await supabase.auth.getSession()
+        if (error || !session) {
+          console.error('Auth error:', error)
+          router.push('/auth')
+          return
         }
-        setUser(user);
-        setIsLoading(false);
+        setUser(session.user)
+        setIsLoading(false)
       } catch (error) {
-        console.error('Error checking user:', error);
-        router.push('/auth');
+        console.error('Error checking auth:', error)
+        router.push('/auth')
       }
-    };
-    checkUser();
-  }, [router]);
+    }
+    checkUser()
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        router.push('/auth')
+      } else if (session) {
+        setUser(session.user)
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [router])
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    return <div className="flex items-center justify-center h-screen">Loading...</div>
   }
 
   if (!user) {
-    return null;
+    return null
   }
 
   return (
@@ -193,5 +225,5 @@ export default function Workspace() {
     >
       <WorkspaceContent />
     </RoomProvider>
-  );
+  )
 } 

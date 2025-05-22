@@ -1,6 +1,7 @@
 import { Liveblocks } from '@liveblocks/node';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { cookies } from 'next/headers';
 
 if (!process.env.LIVEBLOCKS_SECRET_KEY) {
   throw new Error('LIVEBLOCKS_SECRET_KEY is not configured');
@@ -21,19 +22,21 @@ const liveblocks = new Liveblocks({
 
 export async function POST(request: Request) {
   try {
-    const { user } = await request.json();
+    // Get the session from the request
+    const cookieStore = cookies();
+    const supabaseCookie = cookieStore.get('sb-access-token');
     
-    if (!user || !user.id) {
-      console.error('No user provided in request');
+    if (!supabaseCookie) {
+      console.error('No Supabase cookie found');
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    // Get user details from Supabase auth.users table
-    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(user.id);
+    // Get the user from the session
+    const { data: { user }, error: userError } = await supabase.auth.getUser(supabaseCookie.value);
     
-    if (authError || !authUser) {
-      console.error('Error fetching user:', authError);
-      return new NextResponse('User not found', { status: 404 });
+    if (userError || !user) {
+      console.error('Error getting user:', userError);
+      return new NextResponse('Unauthorized', { status: 401 });
     }
 
     // Create a session for the user
@@ -41,9 +44,9 @@ export async function POST(request: Request) {
       user.id,
       {
         userInfo: {
-          name: authUser.user.email || 'Anonymous',
-          picture: authUser.user.user_metadata?.avatar_url || 
-                  `https://ui-avatars.com/api/?name=${encodeURIComponent(authUser.user.email || 'Anonymous')}`,
+          name: user.email || 'Anonymous',
+          picture: user.user_metadata?.avatar_url || 
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email || 'Anonymous')}`,
         },
       }
     );
