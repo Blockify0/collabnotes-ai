@@ -15,46 +15,11 @@ function WorkspaceContent() {
   const [showShareDialog, setShowShareDialog] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
 
   // Liveblocks presence
   const updateMyPresence = useUpdateMyPresence()
   const others = useOthers()
   const self = useSelf()
-
-  useEffect(() => {
-    // Check authentication
-    const checkUser = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession()
-        if (error || !session) {
-          console.error('Auth error:', error)
-          router.push('/auth')
-          return
-        }
-        setUser(session.user)
-        setIsLoading(false)
-      } catch (error) {
-        console.error('Error checking auth:', error)
-        router.push('/auth')
-      }
-    }
-    checkUser()
-
-    // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        router.push('/auth')
-      } else if (session) {
-        setUser(session.user)
-      }
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [router])
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value
@@ -93,19 +58,6 @@ function WorkspaceContent() {
     } finally {
       setIsProcessing(false)
     }
-  }
-
-  const handleShare = () => {
-    setShowShareDialog(true)
-  }
-
-  if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>
-  }
-
-  if (!user) {
-    router.push('/')
-    return null
   }
 
   return (
@@ -170,25 +122,41 @@ export default function Workspace() {
   const router = useRouter()
 
   useEffect(() => {
+    let mounted = true
+
     const checkUser = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession()
-        if (error || !session) {
+        
+        if (!mounted) return
+
+        if (error) {
           console.error('Auth error:', error)
           router.push('/auth')
           return
         }
+
+        if (!session) {
+          console.log('No session found')
+          router.push('/auth')
+          return
+        }
+
         setUser(session.user)
         setIsLoading(false)
       } catch (error) {
         console.error('Error checking auth:', error)
-        router.push('/auth')
+        if (mounted) {
+          router.push('/auth')
+        }
       }
     }
+
     checkUser()
 
-    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return
+
       if (event === 'SIGNED_OUT') {
         router.push('/auth')
       } else if (session) {
@@ -197,12 +165,20 @@ export default function Workspace() {
     })
 
     return () => {
+      mounted = false
       subscription.unsubscribe()
     }
   }, [router])
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   if (!user) {
