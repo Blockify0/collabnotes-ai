@@ -2,6 +2,8 @@ import OpenAI from 'openai'
 
 export async function summarizeText(text: string): Promise<string> {
   try {
+    console.log('Sending summarize request for text length:', text.length)
+    
     const response = await fetch('/api/summarize', {
       method: 'POST',
       headers: {
@@ -10,12 +12,18 @@ export async function summarizeText(text: string): Promise<string> {
       body: JSON.stringify({ text }),
     })
 
+    const data = await response.json()
+
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to summarize text')
+      console.error('Summarize API error:', data)
+      throw new Error(data.details || data.error || 'Failed to summarize text')
     }
 
-    const data = await response.json()
+    if (!data.summary) {
+      throw new Error('No summary received from API')
+    }
+
+    console.log('Successfully received summary')
     return data.summary
   } catch (error: any) {
     console.error('Error in summarizeText:', error)
@@ -25,6 +33,8 @@ export async function summarizeText(text: string): Promise<string> {
 
 export async function transcribeAudio(file: File): Promise<string> {
   try {
+    console.log('Sending audio transcription request for file:', file.name)
+    
     const formData = new FormData()
     formData.append('file', file)
 
@@ -33,12 +43,18 @@ export async function transcribeAudio(file: File): Promise<string> {
       body: formData,
     })
 
+    const data = await response.json()
+
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to transcribe audio')
+      console.error('Transcribe API error:', data)
+      throw new Error(data.details || data.error || 'Failed to transcribe audio')
     }
 
-    const data = await response.json()
+    if (!data.transcription) {
+      throw new Error('No transcription received from API')
+    }
+
+    console.log('Successfully received transcription')
     return data.transcription
   } catch (error: any) {
     console.error('Error in transcribeAudio:', error)
