@@ -146,14 +146,45 @@ function WorkspaceContent() {
 }
 
 export default function Workspace() {
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error || !user) {
+          console.error('Auth error:', error);
+          router.push('/auth');
+          return;
+        }
+        setUser(user);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error checking user:', error);
+        router.push('/auth');
+      }
+    };
+    checkUser();
+  }, [router]);
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <RoomProvider
       id="workspace"
       initialPresence={{
-        id: 'anonymous',
+        id: user.id,
         cursor: null,
-        name: '',
-        color: '',
+        name: user.email || 'Anonymous',
+        color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
         content: '',
       }}
       initialStorage={{
@@ -162,5 +193,5 @@ export default function Workspace() {
     >
       <WorkspaceContent />
     </RoomProvider>
-  )
+  );
 } 
