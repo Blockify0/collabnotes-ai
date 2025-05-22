@@ -71,7 +71,7 @@ export default function ShareDialog({ onClose, roomId }: ShareDialogProps) {
         <div className="mt-4">
           <label htmlFor="share-url" className="block text-sm font-medium text-gray-700">
             Share URL
-          </label>
+            </label>
           <div className="mt-1 flex rounded-md shadow-sm">
             <input
               type="text"
